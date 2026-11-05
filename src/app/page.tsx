@@ -1,92 +1,134 @@
+import Link from "next/link";
 import { Suspense } from "react";
-import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { logout } from "./login/actions";
-import type { Shift, Staff } from "@/lib/schedule/types";
-import { checkStaffRules, findCoverageGaps } from "@/lib/schedule/rules";
-import { fmt } from "@/lib/schedule/time";
-import { DAYS, DAY_LABELS } from "@/lib/schedule/types";
+import { Avatar, AppFrame, DayStrip, Pill, SectionTitle, ShiftCard } from "@/components/ui";
+import { first, getSession, isDay } from "@/lib/schedule/queries";
+import { findCoverageGaps } from "@/lib/schedule/rules";
+import { AFTERNOON_STARTS_AT, fmtRange } from "@/lib/schedule/time";
+import { getNow } from "@/lib/schedule/today";
+import { DAY_LABELS, type Shift } from "@/lib/schedule/types";
 
-async function Schedule() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+async function Today({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {
+  const sp = await searchParams;
+  const s = await getSession();
+  const now = getNow();
 
-  const [{ data: staffRows }, { data: shiftRows }, { data: profile }] = await Promise.all([
-    supabase.from("staff").select("id, name"),
-    supabase.from("shifts").select("staff_id, day, start_min, end_min"),
-    supabase.from("profiles").select("role").eq("id", user.id).maybeSingle(),
-  ]);
-  const STAFF: Staff[] = staffRows ?? [];
-  const shifts: Shift[] = (shiftRows ?? []).map((r) => ({
-    staffId: r.staff_id,
-    day: r.day,
-    start: r.start_min,
-    end: r.end_min,
-  }));
-  const gaps = findCoverageGaps(shifts);
-  const violations = checkStaffRules(shifts);
-  const name = (id: string) => STAFF.find((s) => s.id === id)?.name ?? id;
+  const day = isDay(first(sp.day)) ? (first(sp.day) as keyof typeof DAY_LABELS) : (now.day ?? "mon");
+  const onlyMe = first(sp.who) === "me" && !!s.myStaffId;
+  const nameOf = (id: string) => s.staff.find((x) => x.id === id)?.name ?? id;
+
+  const dayShifts = s.shifts
+    .filter((x) => x.day === day && (!onlyMe || x.staffId === s.myStaffId))
+    .sort((a, b) => a.start - b.start);
+  const morning = dayShifts.filter((x) => x.start < AFTERNOON_STARTS_AT);
+  const afternoon = dayShifts.filter((x) => x.start >= AFTERNOON_STARTS_AT);
+
+  const hereIds = [...new Set(s.shifts.filter((x) => x.day === day).sort((a, b) => a.start - b.start).map((x) => x.staffId))];
+  const isToday = day === now.day;
+  const live = (x: Shift) => isToday && now.minutes >= x.start && now.minutes < x.end;
+
+  const gaps = findCoverageGaps(s.shifts).filter((g) => g.day === day);
+  const afternoonStaff = new Set(s.shifts.filter((x) => x.day === day && x.start >= AFTERNOON_STARTS_AT).map((x) => x.staffId)).size;
+
+  const greeting = now.hour < 12 ? "Good morning" : now.hour < 17 ? "Good afternoon" : "Good evening";
+  const myDays = s.myStaffId ? [...new Set(s.shifts.filter((x) => x.staffId === s.myStaffId).map((x) => x.day))] : [];
+  const href = (d: string) => `/?day=${d}${onlyMe ? "&who=me" : ""}`;
 
   return (
-    <main className="mx-auto max-w-5xl p-4 sm:p-8">
-      <h1 className="text-2xl font-bold">Weekly Schedule</h1>
-      <div className="mb-6 flex items-center justify-between text-sm text-gray-500">
-        <span>
-          Signed in as {user.email}
-          {profile?.role === "admin" ? " (admin)" : ""}
-        </span>
-        <form action={logout}>
-          <button className="underline">Sign out</button>
-        </form>
-      </div>
+    <AppFrame isAdmin={s.isAdmin} name={s.displayName} active="today">
+      <p className="text-sm text-muted">
+        {isToday ? "Today" : DAY_LABELS[day]} · {now.monthLabel} {now.dates[day]}
+      </p>
+      <h1 className="mb-5 text-2xl font-semibold leading-tight">
+        {greeting}, {s.displayName}
+      </h1>
 
-      {violations.length > 0 && (
-        <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">
-          {violations.map((v, i) => (
-            <p key={i}>{v.message}</p>
-          ))}
+      <DayStrip selected={day} dates={now.dates} today={now.day} dotDays={myDays} hrefFor={href} />
+
+      {/* Who's here */}
+      <section className="mt-5 rounded-3xl bg-ink p-5 text-white">
+        <p className="text-sm text-white/70">Who&apos;s here {isToday ? "today" : `on ${DAY_LABELS[day]}`}</p>
+        {hereIds.length === 0 ? (
+          <p className="mt-2 text-lg font-semibold">No one scheduled</p>
+        ) : (
+          <div className="mt-2 flex items-center justify-between">
+            <div className="flex -space-x-2">
+              {hereIds.map((id) => (
+                <Avatar key={id} id={id} name={nameOf(id)} size={42} />
+              ))}
+            </div>
+            <p className="text-right text-sm text-white/80">
+              {hereIds.map(nameOf).join(", ")}
+            </p>
+          </div>
+        )}
+      </section>
+
+      {s.myStaffId && (
+        <div className="mt-4 inline-flex rounded-full bg-white p-1 text-sm font-medium">
+          <Link href={`/?day=${day}`} className={`rounded-full px-4 py-1.5 ${!onlyMe ? "bg-(--accent-soft)" : "text-muted"}`}>
+            Everyone
+          </Link>
+          <Link href={`/?day=${day}&who=me`} className={`rounded-full px-4 py-1.5 ${onlyMe ? "bg-(--accent-soft)" : "text-muted"}`}>
+            Only me
+          </Link>
         </div>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-5">
-        {DAYS.map((day) => (
-          <section key={day} className="rounded border p-3">
-            <h2 className="mb-2 font-semibold">{DAY_LABELS[day]}</h2>
-            <ul className="space-y-1 text-sm">
-              {shifts
-                .filter((s) => s.day === day)
-                .sort((a, b) => a.start - b.start)
-                .map((s, i) => (
-                  <li key={i}>
-                    <span className="font-medium">{name(s.staffId)}</span>
-                    <br />
-                    <span className="text-gray-600">
-                      {fmt(s.start)} – {fmt(s.end)}
-                    </span>
-                  </li>
-                ))}
-            </ul>
-            {gaps
-              .filter((g) => g.day === day)
-              .map((g, i) => (
-                <p key={i} className="mt-2 rounded bg-amber-50 p-1.5 text-xs text-amber-800">
-                  Only {g.have} on {fmt(g.start)}–{fmt(g.end)}
-                </p>
-              ))}
-          </section>
-        ))}
-      </div>
-    </main>
+      <SectionTitle>Morning</SectionTitle>
+      {morning.length === 0 ? (
+        <p className="rounded-3xl bg-white p-4 text-sm text-muted">No morning shifts.</p>
+      ) : (
+        <ul className="space-y-3">
+          {morning.map((x, i) => (
+            <ShiftCard key={i} shift={x} name={nameOf(x.staffId)} live={live(x)} />
+          ))}
+        </ul>
+      )}
+
+      <SectionTitle
+        right={
+          day === "fri" ? (
+            <Pill tone="calm">Lighter day</Pill>
+          ) : !onlyMe ? (
+            <Pill tone={gaps.length === 0 && afternoonStaff >= 2 ? "ok" : "warn"}>
+              {gaps.length === 0 && afternoonStaff >= 2 ? "2+ covered" : "Needs attention"}
+            </Pill>
+          ) : null
+        }
+      >
+        Afternoon
+      </SectionTitle>
+      {afternoon.length === 0 ? (
+        <p className="rounded-3xl bg-white p-4 text-sm text-muted">No afternoon shifts.</p>
+      ) : (
+        <ul className="space-y-3">
+          {afternoon.map((x, i) => (
+            <ShiftCard key={i} shift={x} name={nameOf(x.staffId)} live={live(x)} />
+          ))}
+        </ul>
+      )}
+
+      {s.isAdmin && !onlyMe && gaps.length > 0 && day !== "fri" && (
+        <div className="mt-4 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+          <p className="font-semibold">Heads up</p>
+          {gaps.map((g, i) => (
+            <p key={i}>
+              Only {g.have} {g.have === 1 ? "person" : "people"} from {fmtRange(g.start, g.end)}
+            </p>
+          ))}
+          <Link href={`/admin?day=${day}`} className="mt-2 inline-block font-semibold underline">
+            Fix in editor
+          </Link>
+        </div>
+      )}
+    </AppFrame>
   );
 }
 
-export default function Home() {
+export default function Home(props: PageProps<"/">) {
   return (
-    <Suspense fallback={<p className="p-8 text-gray-500">Loading…</p>}>
-      <Schedule />
+    <Suspense fallback={<p className="p-8 text-muted">Loading…</p>}>
+      <Today searchParams={props.searchParams} />
     </Suspense>
   );
 }
