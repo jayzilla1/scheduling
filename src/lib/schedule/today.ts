@@ -1,3 +1,4 @@
+import { mondayOf, weekIsoDates } from "./dates";
 import { DAYS, type Day } from "./types";
 
 const TZ = process.env.NEXT_PUBLIC_TIMEZONE ?? "America/New_York";
@@ -11,6 +12,10 @@ export interface Now {
   day: Day | null;
   minutes: number;
   hour: number;
+  /** today as YYYY-MM-DD in the daycare's time zone */
+  todayIso: string;
+  /** full dates for each weekday of the current week (Sat/Sun show the coming week) */
+  isoDates: Record<Day, string>;
   /** day-of-month for each weekday of the current week (Mon-Fri) */
   dates: Record<Day, number>;
   monthLabel: string;
@@ -27,19 +32,17 @@ export function getNow(): Now {
   const hour = Number(parts.hour);
   const minutes = hour * 60 + Number(parts.minute);
 
-  // Work out this week's Monday-Friday dates in the daycare's time zone.
-  const todayUtc = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day));
-  const idx = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(parts.weekday);
-  const mondayOffset = idx === 0 ? 1 : 1 - idx; // on Sunday show the coming week
+  const todayIso = `${parts.year}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+  const isoDates = weekIsoDates(mondayOf(todayIso));
   const dates = {} as Record<Day, number>;
-  DAYS.forEach((day, i) => {
-    dates[day] = new Date(todayUtc + (mondayOffset + i) * 86400000).getUTCDate();
-  });
+  DAYS.forEach((day) => (dates[day] = Number(isoDates[day].slice(8))));
 
   return {
     day: WEEKDAY_TO_DAY[parts.weekday],
     minutes,
     hour,
+    todayIso,
+    isoDates,
     dates,
     monthLabel: new Intl.DateTimeFormat("en-US", { timeZone: TZ, month: "long" }).format(d),
   };

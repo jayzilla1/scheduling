@@ -3,15 +3,13 @@ import { Suspense } from "react";
 import { Avatar, AppFrame, Pill } from "@/components/ui";
 import { colorFor } from "@/lib/schedule/colors";
 import { getSession } from "@/lib/schedule/queries";
-import { findCoverageGaps } from "@/lib/schedule/rules";
+import { gapsForDate } from "@/lib/schedule/rules";
 import { fmtRange } from "@/lib/schedule/time";
-import { getNow } from "@/lib/schedule/today";
 import { DAYS, DAY_LABELS } from "@/lib/schedule/types";
 
 async function Week() {
   const s = await getSession();
-  const now = getNow();
-  const gaps = findCoverageGaps(s.shifts);
+  const now = s.now;
   const nameOf = (id: string) => s.staff.find((x) => x.id === id)?.name ?? id;
 
   return (
@@ -21,9 +19,9 @@ async function Week() {
 
       <ul className="space-y-3">
         {DAYS.map((d) => {
-          const dayShifts = s.shifts.filter((x) => x.day === d);
+          const dayShifts = s.effective.filter((x) => x.day === d);
           const ids = [...new Set(dayShifts.map((x) => x.staffId))];
-          const dayGaps = gaps.filter((g) => g.day === d);
+          const dayGaps = gapsForDate(now.isoDates[d], s.shifts, s.changes, s.events);
           return (
             <li key={d}>
               <Link

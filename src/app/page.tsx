@@ -2,35 +2,35 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Avatar, AppFrame, DayStrip, Pill, SectionTitle, ShiftCard } from "@/components/ui";
 import { first, getSession, isDay } from "@/lib/schedule/queries";
-import { findCoverageGaps } from "@/lib/schedule/rules";
+import { gapsForDate } from "@/lib/schedule/rules";
 import { AFTERNOON_STARTS_AT, fmtRange } from "@/lib/schedule/time";
-import { getNow } from "@/lib/schedule/today";
 import { DAY_LABELS, type Shift } from "@/lib/schedule/types";
 
 async function Today({ searchParams }: { searchParams: PageProps<"/">["searchParams"] }) {
   const sp = await searchParams;
   const s = await getSession();
-  const now = getNow();
+  const now = s.now;
 
   const day = isDay(first(sp.day)) ? (first(sp.day) as keyof typeof DAY_LABELS) : (now.day ?? "mon");
   const onlyMe = first(sp.who) === "me" && !!s.myStaffId;
   const nameOf = (id: string) => s.staff.find((x) => x.id === id)?.name ?? id;
 
-  const dayShifts = s.shifts
+  const dayShifts = s.effective
     .filter((x) => x.day === day && (!onlyMe || x.staffId === s.myStaffId))
     .sort((a, b) => a.start - b.start);
   const morning = dayShifts.filter((x) => x.start < AFTERNOON_STARTS_AT);
   const afternoon = dayShifts.filter((x) => x.start >= AFTERNOON_STARTS_AT);
 
-  const hereIds = [...new Set(s.shifts.filter((x) => x.day === day).sort((a, b) => a.start - b.start).map((x) => x.staffId))];
+  const hereIds = [...new Set(s.effective.filter((x) => x.day === day).sort((a, b) => a.start - b.start).map((x) => x.staffId))];
   const isToday = day === now.day;
   const live = (x: Shift) => isToday && now.minutes >= x.start && now.minutes < x.end;
 
-  const gaps = findCoverageGaps(s.shifts).filter((g) => g.day === day);
-  const afternoonStaff = new Set(s.shifts.filter((x) => x.day === day && x.start >= AFTERNOON_STARTS_AT).map((x) => x.staffId)).size;
+  const dayEvents = s.events.filter((e) => e.date === now.isoDates[day]);
+  const gaps = s.isAdmin ? gapsForDate(now.isoDates[day], s.shifts, s.changes, s.events) : [];
+  const afternoonStaff = new Set(s.effective.filter((x) => x.day === day && x.start >= AFTERNOON_STARTS_AT).map((x) => x.staffId)).size;
 
   const greeting = now.hour < 12 ? "Good morning" : now.hour < 17 ? "Good afternoon" : "Good evening";
-  const myDays = s.myStaffId ? [...new Set(s.shifts.filter((x) => x.staffId === s.myStaffId).map((x) => x.day))] : [];
+  const myDays = s.myStaffId ? [...new Set(s.effective.filter((x) => x.staffId === s.myStaffId).map((x) => x.day))] : [];
   const href = (d: string) => `/?day=${d}${onlyMe ? "&who=me" : ""}`;
 
   return (
@@ -108,7 +108,18 @@ async function Today({ searchParams }: { searchParams: PageProps<"/">["searchPar
         </ul>
       )}
 
-      {s.isAdmin && !onlyMe && gaps.length > 0 && day !== "fri" && (
+      {s.isAdmin && !onlyMe && dayEvents.length > 0 && (
+        <div className="mt-4 rounded-3xl bg-white p-4 text-sm">
+          <p className="mb-1 font-semibold">On the calendar</p>
+          {dayEvents.map((e) => (
+            <Link key={e.id} href={`/events/${e.id}`} className="block text-muted underline-offset-4 hover:underline">
+              {e.title} · {e.person === "pam" ? "Pam" : nameOf(e.person)} · {fmtRange(e.start, e.end)}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {s.isAdmin && !onlyMe && gaps.length > 0 && (
         <div className="mt-4 rounded-3xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           <p className="font-semibold">Heads up</p>
           {gaps.map((g, i) => (
@@ -116,8 +127,8 @@ async function Today({ searchParams }: { searchParams: PageProps<"/">["searchPar
               Only {g.have} {g.have === 1 ? "person" : "people"} from {fmtRange(g.start, g.end)}
             </p>
           ))}
-          <Link href={`/admin?day=${day}`} className="mt-2 inline-block font-semibold underline">
-            Fix in editor
+          <Link href={dayEvents[0] ? `/events/${dayEvents[0].id}` : `/admin?day=${day}`} className="mt-2 inline-block font-semibold underline">
+            {dayEvents[0] ? "See suggested fixes" : "Fix in editor"}
           </Link>
         </div>
       )}

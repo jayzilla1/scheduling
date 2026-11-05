@@ -37,3 +37,24 @@ export interface RuleViolation {
   message: string;
   day?: Day;
 }
+
+/** A one-day change layered on top of the weekly template. */
+export interface ScheduleChange {
+  kind: "add" | "remove";
+  staffId: StaffId;
+  /** YYYY-MM-DD */
+  date: string;
+  start: number;
+  end: number;
+  eventId?: number | null;
+}
+
+/** Something happening on a specific date. `person` is "pam" or a staff id. */
+export interface EventRow {
+  id: number;
+  title: string;
+  person: string;
+  date: string;
+  start: number;
+  end: number;
+}

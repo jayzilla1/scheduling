@@ -14,6 +14,9 @@ export const SunIcon = () => (
 export const CalIcon = () => (
   <svg viewBox="0 0 24 24" className={icon} {...stroke}><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M8 3v4M16 3v4M3 10h18" /></svg>
 );
+export const SparkIcon = () => (
+  <svg viewBox="0 0 24 24" className={icon} {...stroke}><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" /><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z" /></svg>
+);
 export const PencilIcon = () => (
   <svg viewBox="0 0 24 24" className={icon} {...stroke}><path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z" /><path d="m13.5 6.5 4 4" /></svg>
 );
@@ -32,7 +35,7 @@ export function Avatar({ id, name, size = 36 }: { id: string; name: string; size
 }
 
 /* ---------- app frame: header + bottom nav ---------- */
-export type NavKey = "today" | "week" | "edit";
+export type NavKey = "today" | "week" | "events" | "edit";
 
 export function AppFrame({
   isAdmin, name, active, children,
@@ -40,7 +43,12 @@ export function AppFrame({
   const items: { key: NavKey; href: string; label: string; icon: ReactNode }[] = [
     { key: "today", href: "/", label: "Today", icon: <SunIcon /> },
     { key: "week", href: "/week", label: "Week", icon: <CalIcon /> },
-    ...(isAdmin ? [{ key: "edit" as const, href: "/admin", label: "Edit", icon: <PencilIcon /> }] : []),
+    ...(isAdmin
+      ? [
+          { key: "events" as const, href: "/events", label: "Events", icon: <SparkIcon /> },
+          { key: "edit" as const, href: "/admin", label: "Edit", icon: <PencilIcon /> },
+        ]
+      : []),
   ];
 
   return (
@@ -72,7 +80,7 @@ export function AppFrame({
 
       <main className="px-6 pt-5">{children}</main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-xl rounded-t-[2rem] bg-white px-8 pb-5 pt-3 shadow-[0_-8px_30px_rgba(29,33,64,0.08)]">
+      <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-xl rounded-t-[2rem] bg-white px-4 pb-5 pt-3 shadow-[0_-8px_30px_rgba(29,33,64,0.08)]">
         <ul className="flex justify-around">
           {items.map((it) => {
             const on = it.key === active;

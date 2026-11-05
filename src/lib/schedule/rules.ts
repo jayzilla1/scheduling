@@ -1,4 +1,6 @@
-import type { CoverageGap, Day, RuleViolation, Shift } from "./types";
+import { dayOfDate } from "./dates";
+import { effectiveShiftsOn } from "./effective";
+import type { CoverageGap, Day, EventRow, RuleViolation, ScheduleChange, Shift } from "./types";
 import { DAYS } from "./types";
 import { AFTERNOON_STARTS_AT, t } from "./time";
 
@@ -16,47 +18,79 @@ export const DEFAULT_CONFIG: RuleConfig = {
   coverageExemptDays: ["fri"],
 };
 
-/** Finds time ranges in the coverage window where fewer than minStaff people are working. */
-export function findCoverageGaps(
-  shifts: Shift[],
-  config: RuleConfig = DEFAULT_CONFIG,
-): CoverageGap[] {
+export interface Window {
+  start: number;
+  end: number;
+}
+
+/** Time ranges on one day, inside `windows`, where fewer than `minStaff` people are working. */
+export function findGapsOnDay(day: Day, shifts: Shift[], windows: Window[], minStaff: number): CoverageGap[] {
+  if (windows.length === 0) return [];
+  const dayShifts = shifts.filter((x) => x.day === day);
+  const lo = Math.min(...windows.map((w) => w.start));
+  const hi = Math.max(...windows.map((w) => w.end));
+
+  const points = new Set<number>(windows.flatMap((w) => [w.start, w.end]));
+  for (const x of dayShifts) {
+    if (x.start > lo && x.start < hi) points.add(x.start);
+    if (x.end > lo && x.end < hi) points.add(x.end);
+  }
+  const sorted = [...points].sort((a, b) => a - b);
+
   const gaps: CoverageGap[] = [];
-  const { start: ws, end: we } = config.coverageWindow;
-
-  for (const day of DAYS) {
-    if (config.coverageExemptDays.includes(day)) continue;
-    const dayShifts = shifts.filter((x) => x.day === day);
-
-    const points = new Set<number>([ws, we]);
-    for (const x of dayShifts) {
-      if (x.start > ws && x.start < we) points.add(x.start);
-      if (x.end > ws && x.end < we) points.add(x.end);
+  let current: CoverageGap | null = null;
+  for (let i = 0; i < sorted.length - 1; i++) {
+    const a = sorted[i];
+    const b = sorted[i + 1];
+    if (!windows.some((w) => w.start <= a && w.end >= b)) {
+      current = null;
+      continue;
     }
-    const sorted = [...points].sort((a, b) => a - b);
-
-    let current: CoverageGap | null = null;
-    for (let i = 0; i < sorted.length - 1; i++) {
-      const a = sorted[i];
-      const b = sorted[i + 1];
-      const staffNow = new Set(
-        dayShifts.filter((x) => x.start <= a && x.end >= b).map((x) => x.staffId),
-      ).size;
-      if (staffNow < config.minStaff) {
-        if (current && current.end === a && current.have === staffNow) {
-          current.end = b;
-        } else {
-          current = { day, start: a, end: b, have: staffNow, need: config.minStaff };
-          gaps.push(current);
-        }
+    const have = new Set(dayShifts.filter((x) => x.start <= a && x.end >= b).map((x) => x.staffId)).size;
+    if (have < minStaff) {
+      if (current && current.end === a && current.have === have) {
+        current.end = b;
       } else {
-        current = null;
+        current = { day, start: a, end: b, have, need: minStaff };
+        gaps.push(current);
       }
+    } else {
+      current = null;
     }
   }
   return gaps;
 }
 
+/** Standard afternoon coverage gaps for the whole week. */
+export function findCoverageGaps(shifts: Shift[], config: RuleConfig = DEFAULT_CONFIG): CoverageGap[] {
+  return DAYS.flatMap((day) =>
+    config.coverageExemptDays.includes(day)
+      ? []
+      : findGapsOnDay(day, shifts, [config.coverageWindow], config.minStaff),
+  );
+}
+
+/**
+ * Gaps on one specific date: the usual afternoon rule, plus any time Pam is away
+ * (she is not counted as staff, so when she leaves the girls need 2 people even on Friday).
+ */
+export function gapsForDate(
+  date: string,
+  template: Shift[],
+  changes: ScheduleChange[],
+  events: EventRow[],
+  config: RuleConfig = DEFAULT_CONFIG,
+): CoverageGap[] {
+  const day = dayOfDate(date);
+  if (!day) return [];
+  const windows: Window[] = [
+    ...(config.coverageExemptDays.includes(day) ? [] : [config.coverageWindow]),
+    ...events.filter((e) => e.date === date && e.person === "pam").map((e) => ({ start: e.start, end: e.end })),
+  ];
+  return findGapsOnDay(day, effectiveShiftsOn(date, template, changes), windows, config.minStaff);
+}
+
+const GIANNA_EARLIEST_START = t("15:00");
 const isAfternoon = (x: Shift) => x.start >= AFTERNOON_STARTS_AT;
 
 /** Staff-specific hard rules from Pam. */
@@ -82,10 +116,10 @@ export function checkStaffRules(shifts: Shift[]): RuleViolation[] {
       });
     }
   }
-  if (shifts.some((x) => x.staffId === "gianna" && !isAfternoon(x))) {
+  if (shifts.some((x) => x.staffId === "gianna" && (!isAfternoon(x) || x.start < GIANNA_EARLIEST_START))) {
     violations.push({
       rule: "gianna-afternoons-only",
-      message: "Gianna can only work afternoons (school in the morning).",
+      message: "Gianna can only work afternoons, starting 3:00 PM or later (she's in school before that).",
     });
   }
 
