@@ -1,7 +1,7 @@
 import { mondayOf, weekIsoDates } from "./dates";
 import { DAYS, type Day } from "./types";
 
-const TZ = process.env.NEXT_PUBLIC_TIMEZONE ?? "America/New_York";
+const TZ = process.env.NEXT_PUBLIC_TIMEZONE || "America/New_York";
 
 const WEEKDAY_TO_DAY: Record<string, Day | null> = {
   Mon: "mon", Tue: "tue", Wed: "wed", Thu: "thu", Fri: "fri", Sat: null, Sun: null,
