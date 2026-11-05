@@ -37,10 +37,10 @@ async function EventsContent({ searchParams }: { searchParams: PageProps<"/event
       {error && <p className="mb-4 rounded-2xl bg-rose-50 p-3 text-sm text-rose-800">{error}</p>}
 
       {/* AI box */}
-      <section className="rounded-3xl bg-[#171a3d] p-5 text-white">
+      <section className="rounded-3xl border border-line bg-white p-5">
         <div className="mb-3 flex items-center gap-2 text-(--accent)">
           <SparkIcon />
-          <p className="font-semibold text-white">Ask the assistant</p>
+          <p className="font-semibold text-ink">Ask the assistant</p>
         </div>
         <form action={draftFromText} className="space-y-3">
           <textarea
@@ -49,9 +49,9 @@ async function EventsContent({ searchParams }: { searchParams: PageProps<"/event
             rows={3}
             maxLength={600}
             placeholder={`e.g. "Her game is Thursday at 4. I need to leave at 2:30."`}
-            className="w-full resize-none rounded-2xl border border-white/10 bg-white/10 p-3 text-sm text-white outline-none placeholder:text-white/50 focus:border-(--accent)"
+            className="w-full resize-none rounded-2xl border border-line bg-(--page) p-3 text-sm outline-none placeholder:text-muted focus:border-(--accent)"
           />
-          <button className="w-full rounded-xl bg-(--accent) py-2.5 text-sm font-semibold text-[#171a3d]">Fill in the details for me</button>
+          <button className="w-full rounded-xl bg-(--accent) py-2.5 text-sm font-semibold text-(--on-accent)">Fill in the details for me</button>
         </form>
       </section>
 
@@ -84,7 +84,7 @@ async function EventsContent({ searchParams }: { searchParams: PageProps<"/event
           Back at
           <input type="time" name="end" defaultValue={v("end")} required className={`${field} mt-1`} />
         </label>
-        <button className="col-span-2 mt-1 rounded-xl bg-ink py-2.5 text-sm font-semibold text-white">Check the schedule</button>
+        <button className="col-span-2 mt-1 rounded-xl bg-(--accent) py-2.5 text-sm font-semibold text-(--on-accent)">Check the schedule</button>
       </form>
 
       <SectionTitle>Coming up</SectionTitle>

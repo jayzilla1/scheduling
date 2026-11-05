@@ -2,7 +2,7 @@
 
 @theme inline {
   --font-sans: var(--font-poppins), system-ui, sans-serif;
-  --color-ink: #1d2140;
+  --color-ink: #1f2330;
   --color-muted: #7a7f99;
   --color-line: #e8eaf3;
 }
@@ -12,13 +12,15 @@
   --page: #f5f6fb;
   --accent: #4f5bd5;
   --accent-soft: #e9ebfc;
+  --on-accent: #ffffff;
 }
 
-/* Admin look: deep navy + warm amber so Pam always knows she can edit */
+/* Admin look: warm cream + amber so Pam always knows she can edit */
 [data-role="admin"] {
   --page: #f7f4ee;
   --accent: #f59e0b;
   --accent-soft: #fdf0d2;
+  --on-accent: #2b1d00;
 }
 
 body {

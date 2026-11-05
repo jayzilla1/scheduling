@@ -61,7 +61,7 @@ async function Editor({ searchParams }: { searchParams: PageProps<"/admin">["sea
               </select>
               <input type="time" name="start" defaultValue={toInput(r.start_min)} className={field} required />
               <input type="time" name="end" defaultValue={toInput(r.end_min)} className={field} required />
-              <button className="rounded-xl bg-ink py-2 text-sm font-medium text-white">Save</button>
+              <button className="rounded-xl bg-(--accent) py-2 text-sm font-semibold text-(--on-accent)">Save</button>
               <button formAction={deleteShift} formNoValidate className="rounded-xl bg-rose-50 py-2 text-sm font-medium text-rose-700">
                 Delete
               </button>
@@ -79,7 +79,7 @@ async function Editor({ searchParams }: { searchParams: PageProps<"/admin">["sea
         </select>
         <input type="time" name="start" className={field} required />
         <input type="time" name="end" className={field} required />
-        <button className="col-span-2 rounded-xl bg-(--accent) py-2.5 text-sm font-semibold text-[#171a3d]">
+        <button className="col-span-2 rounded-xl bg-(--accent) py-2.5 text-sm font-semibold text-(--on-accent)">
           Add shift to {DAY_LABELS[day]}
         </button>
       </form>
@@ -93,7 +93,7 @@ async function Editor({ searchParams }: { searchParams: PageProps<"/admin">["sea
               key={d}
               name="target"
               value={d}
-              className={`flex-1 rounded-xl py-2 text-sm font-medium ${on ? "bg-ink text-white" : "bg-(--accent-soft)"}`}
+              className={`flex-1 rounded-xl py-2 text-sm font-medium ${on ? "bg-(--accent) text-(--on-accent)" : "bg-(--accent-soft)"}`}
             >
               {DAY_LABELS[d]}
             </button>

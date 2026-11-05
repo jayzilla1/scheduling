@@ -54,23 +54,19 @@ export function AppFrame({
   return (
     <div data-role={isAdmin ? "admin" : "staff"} className="mx-auto min-h-dvh max-w-xl pb-28">
       <header
-        className={
-          isAdmin
-            ? "flex items-center justify-between rounded-b-[2rem] bg-[#171a3d] px-6 pb-5 pt-6 text-white"
-            : "flex items-center justify-between px-6 pt-6"
-        }
+        className="flex items-center justify-between rounded-b-[2rem] bg-white px-6 pb-5 pt-6 shadow-[0_8px_30px_rgba(31,35,48,0.05)]"
       >
         <div className="flex items-center gap-2">
           <span className="text-lg font-semibold tracking-tight">Daycare Schedule</span>
           {isAdmin && (
-            <span className="rounded-full bg-(--accent) px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-[#171a3d]">
+            <span className="rounded-full bg-(--accent) px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-(--on-accent)">
               Admin
             </span>
           )}
         </div>
         <form action={logout}>
           <button
-            className={`text-xs font-medium underline-offset-4 hover:underline ${isAdmin ? "text-white/70" : "text-muted"}`}
+            className="text-xs font-medium text-muted underline-offset-4 hover:underline"
             title={`Signed in as ${name}`}
           >
             Sign out
@@ -124,10 +120,10 @@ export function DayStrip({
               href={hrefFor(d)}
               scroll={false}
               className={`flex flex-col items-center gap-0.5 rounded-2xl py-3 transition ${
-                on ? "bg-ink text-white shadow-lg shadow-ink/20" : "bg-white text-ink"
+                on ? "bg-(--accent) text-(--on-accent) shadow-lg shadow-(--accent)/30" : "bg-white text-ink"
               }`}
             >
-              <span className={`text-[11px] font-medium ${on ? "text-white/70" : "text-muted"}`}>
+              <span className={`text-[11px] font-medium ${on ? "text-(--on-accent)/70" : "text-muted"}`}>
                 {DAY_LABELS[d].slice(0, 3)}
               </span>
               <span className="text-lg font-semibold leading-tight">{dates[d]}</span>

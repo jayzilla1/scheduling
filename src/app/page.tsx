@@ -45,8 +45,8 @@ async function Today({ searchParams }: { searchParams: PageProps<"/">["searchPar
       <DayStrip selected={day} dates={now.dates} today={now.day} dotDays={myDays} hrefFor={href} />
 
       {/* Who's here */}
-      <section className="mt-5 rounded-3xl bg-ink p-5 text-white">
-        <p className="text-sm text-white/70">Who&apos;s here {isToday ? "today" : `on ${DAY_LABELS[day]}`}</p>
+      <section className="mt-5 rounded-3xl border border-line bg-white p-5">
+        <p className="text-sm text-muted">Who&apos;s here {isToday ? "today" : `on ${DAY_LABELS[day]}`}</p>
         {hereIds.length === 0 ? (
           <p className="mt-2 text-lg font-semibold">No one scheduled</p>
         ) : (
@@ -56,7 +56,7 @@ async function Today({ searchParams }: { searchParams: PageProps<"/">["searchPar
                 <Avatar key={id} id={id} name={nameOf(id)} size={42} />
               ))}
             </div>
-            <p className="text-right text-sm text-white/80">
+            <p className="text-right text-sm text-muted">
               {hereIds.map(nameOf).join(", ")}
             </p>
           </div>

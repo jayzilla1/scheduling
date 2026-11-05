@@ -84,7 +84,7 @@ async function Detail({ params, searchParams }: { params: PageProps<"/events/[id
                     <input type="hidden" name="eventId" value={ev.id} />
                     <input type="hidden" name="index" value={i} />
                     <input type="hidden" name="description" value={p.description} />
-                    <button className="w-full rounded-xl bg-(--accent) py-2 text-sm font-semibold text-[#171a3d]">Apply this fix</button>
+                    <button className="w-full rounded-xl bg-(--accent) py-2 text-sm font-semibold text-(--on-accent)">Apply this fix</button>
                   </form>
                 </li>
               ))}
