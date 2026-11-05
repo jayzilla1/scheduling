@@ -1,10 +1,31 @@
-import { STAFF, buildTemplate } from "@/lib/schedule/data";
+import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { logout } from "./login/actions";
+import type { Shift, Staff } from "@/lib/schedule/types";
 import { checkStaffRules, findCoverageGaps } from "@/lib/schedule/rules";
 import { fmt } from "@/lib/schedule/time";
 import { DAYS, DAY_LABELS } from "@/lib/schedule/types";
 
-export default function Home() {
-  const shifts = buildTemplate("thu");
+async function Schedule() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const [{ data: staffRows }, { data: shiftRows }, { data: profile }] = await Promise.all([
+    supabase.from("staff").select("id, name"),
+    supabase.from("shifts").select("staff_id, day, start_min, end_min"),
+    supabase.from("profiles").select("role").eq("id", user.id).maybeSingle(),
+  ]);
+  const STAFF: Staff[] = staffRows ?? [];
+  const shifts: Shift[] = (shiftRows ?? []).map((r) => ({
+    staffId: r.staff_id,
+    day: r.day,
+    start: r.start_min,
+    end: r.end_min,
+  }));
   const gaps = findCoverageGaps(shifts);
   const violations = checkStaffRules(shifts);
   const name = (id: string) => STAFF.find((s) => s.id === id)?.name ?? id;
@@ -12,7 +33,15 @@ export default function Home() {
   return (
     <main className="mx-auto max-w-5xl p-4 sm:p-8">
       <h1 className="text-2xl font-bold">Weekly Schedule</h1>
-      <p className="mb-6 text-sm text-gray-500">Preview with Pam&apos;s template (read-only for now)</p>
+      <div className="mb-6 flex items-center justify-between text-sm text-gray-500">
+        <span>
+          Signed in as {user.email}
+          {profile?.role === "admin" ? " (admin)" : ""}
+        </span>
+        <form action={logout}>
+          <button className="underline">Sign out</button>
+        </form>
+      </div>
 
       {violations.length > 0 && (
         <div className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">
@@ -51,5 +80,13 @@ export default function Home() {
         ))}
       </div>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<p className="p-8 text-gray-500">Loading…</p>}>
+      <Schedule />
+    </Suspense>
   );
 }
