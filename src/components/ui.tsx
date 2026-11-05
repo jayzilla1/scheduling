@@ -52,7 +52,7 @@ export function AppFrame({
   ];
 
   return (
-    <div data-role={isAdmin ? "admin" : "staff"} className="mx-auto min-h-dvh max-w-xl pb-28">
+    <div data-role={isAdmin ? "admin" : "staff"} className="mx-auto min-h-dvh max-w-xl overflow-x-clip pb-32">
       <header
         className="flex items-center justify-between rounded-b-[2rem] bg-white px-6 pb-5 pt-6 shadow-[0_8px_30px_rgba(31,35,48,0.05)]"
       >
@@ -76,7 +76,7 @@ export function AppFrame({
 
       <main className="px-6 pt-5">{children}</main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-xl rounded-t-[2rem] bg-white px-4 pb-5 pt-3 shadow-[0_-8px_30px_rgba(29,33,64,0.08)]">
+      <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-xl rounded-t-[2rem] bg-white px-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3 shadow-[0_-8px_30px_rgba(29,33,64,0.08)]">
         <ul className="flex justify-around">
           {items.map((it) => {
             const on = it.key === active;

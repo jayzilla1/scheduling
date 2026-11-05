@@ -14,6 +14,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover", // lets the layout use the whole iPhone screen; we pad for the home bar below
   themeColor: "#F5F6FB",
 };
 
